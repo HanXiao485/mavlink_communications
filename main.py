@@ -66,6 +66,7 @@ import threading
 import configparser
 from pymavlink import mavutil
 from mav_util import MavDecoder
+from control_utils import MotorController
 
 class X7WifiTelemetry:
     def __init__(self):
@@ -79,14 +80,33 @@ class X7WifiTelemetry:
         self.local_port = int(self.config['NETWORK']['LOCAL_PORT'])
         self.source_system = int(self.config['MAVLINK']['SOURCE_SYSTEM'])
         
+        # 电机控制参数
+        self.motor_max_rpm = int(self.config['MOTOR']['MAX_RPM'])
+        
         # MAVLink连接初始化
-        self.conn = self._init_mavlink_connection()
+        # self.conn = self._init_mavlink_connection()
+        self.conn = mavutil.mavlink_connection(
+            f"udp:{self.target_ip}:{self.target_port}",
+            dialect='common',  # 关键修改：强制使用common方言
+            source_system=self.source_system,
+            source_component=1,
+            input=True,
+            udp_timeout=5
+        )
         self.decoder = MavDecoder()
         
         # 启动网络监控线程
         self.net_monitor = threading.Thread(target=self._network_monitor)
         self.net_monitor.daemon = True
         self.net_monitor.start()
+        
+        # 初始化电机参数
+        self.motor_ctrl = MotorController(self.conn, self.motor_max_rpm)
+        
+        # 启动控制线程
+        self.control_thread = threading.Thread(target=self._execute_control)
+        self.control_thread.daemon = True
+        self.control_thread.start()
 
     def _init_mavlink_connection(self):
         """建立UDP连接并发送初始心跳包"""
@@ -126,6 +146,27 @@ class X7WifiTelemetry:
             return True
         except OSError:
             return False
+        
+    def _execute_control(self):
+        """控制指令执行线程"""
+        print("控制指令：arm/takeoff/land/mode/motor")
+        while True:
+            cmd = input("输入指令: ").split()
+            if not cmd:
+                continue
+            if cmd[0] == "arm":
+                self.decoder.arm_drone()
+            elif cmd[0] == "takeoff":
+                self.decoder.takeoff()
+            elif cmd[0] == "land":
+                self.decoder.land()
+            elif cmd[0] == "mode":
+                self.decoder.set_flight_mode(cmd[1])
+            elif cmd[0] == "motor":
+                if len(cmd) == 5:
+                    self.motor_ctrl.set_motors(*map(int, cmd[1:5]))
+            else:
+                print("未知指令")
 
     def start_streaming(self):
         """主数据接收循环"""
@@ -139,7 +180,7 @@ class X7WifiTelemetry:
                     type=['HEARTBEAT', 'GPS_RAW_INT', 'ATTITUDE',
                           'SYS_STATUS', 'HIGHRES_IMU', 'LOCAL_POSITION_NED'],
                     blocking=True,
-                    timeout=3
+                    timeout=5
                 )
                 
                 if msg:
@@ -153,7 +194,7 @@ class X7WifiTelemetry:
         """消息处理与显示"""
         decoded_data = self.decoder.decode(msg)
         timestamp = time.strftime("%H:%M:%S.%f")[:-3]
-        print(f"[{timestamp}] {decoded_data}")
+        # print(f"[{timestamp}] {decoded_data}")
 
 if __name__ == "__main__":
     monitor = X7WifiTelemetry()

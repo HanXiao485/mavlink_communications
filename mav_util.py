@@ -16,8 +16,8 @@ class MavDecoder:
         if msg_type == 'HEARTBEAT':
             return f"心跳 | 模式: {self._flight_mode(msg)} | 状态: {self._system_status(msg)}"
             
-        elif msg_type == 'GPS_RAW_INT':
-            return self._gps_data(msg)
+        # elif msg_type == 'GPS_RAW_INT':
+        #     return self._gps_data(msg)
             
         elif msg_type == 'ATTITUDE':
             return (f"姿态 | 横滚: {math.degrees(msg.roll):.1f}° | "
@@ -29,13 +29,13 @@ class MavDecoder:
         #             f"电流: {msg.current_battery/100:.1f}A | "
         #             f"剩余电量: {msg.battery_remaining}%")
             
-        # elif msg_type == 'HIGHRES_IMU':
-        #     return (f"IMU | 角速度: X={math.degrees(msg.xgyro):.2f}°/s "
-        #             f"Y={math.degrees(msg.ygyro):.2f}°/s "
-        #             f"Z={math.degrees(msg.zgyro):.2f}°/s | "
-        #             f"线加速度: X={msg.xacc:.2f}m/s² "
-        #             f"Y={msg.yacc:.2f}m/s² "
-        #             f"Z={msg.zacc:.2f}m/s²")
+        elif msg_type == 'HIGHRES_IMU':
+            return (f"IMU | 角速度: X={math.degrees(msg.xgyro):.2f}°/s "
+                    f"Y={math.degrees(msg.ygyro):.2f}°/s "
+                    f"Z={math.degrees(msg.zgyro):.2f}°/s | "
+                    f"线加速度: X={msg.xacc:.2f}m/s² "
+                    f"Y={msg.yacc:.2f}m/s² "
+                    f"Z={msg.zacc:.2f}m/s²")
         
         elif msg_type == 'LOCAL_POSITION_NED':
             return (f"位置 | 北向: {msg.x:.2f}m "

@@ -87,7 +87,7 @@ class X7WifiTelemetry:
         # self.conn = self._init_mavlink_connection()
         self.conn = mavutil.mavlink_connection(
             f"udp:{self.target_ip}:{self.target_port}",
-            dialect='common',  # 关键修改：强制使用common方言
+            dialect='common',  # 强制使用common
             source_system=self.source_system,
             source_component=1,
             input=True,

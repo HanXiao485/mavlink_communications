@@ -103,10 +103,10 @@ class X7WifiTelemetry:
         # 初始化电机参数
         self.motor_ctrl = MotorController(self.conn, self.motor_max_rpm)
         
-        # 启动控制线程
-        self.control_thread = threading.Thread(target=self._execute_control)
-        self.control_thread.daemon = True
-        self.control_thread.start()
+        # # 启动控制线程
+        # self.control_thread = threading.Thread(target=self._execute_control)
+        # self.control_thread.daemon = True
+        # self.control_thread.start()
 
     def _init_mavlink_connection(self):
         """建立UDP连接并发送初始心跳包"""

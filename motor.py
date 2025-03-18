@@ -15,6 +15,7 @@
 
 from pymavlink import mavutil
 import time
+import sys
 
 # 修改以下连接字符串，确保与雷迅X7飞控所在网络的IP地址和端口匹配
 connection_string = "udp:0.0.0.0:14550"
@@ -25,56 +26,43 @@ print("正在连接飞控...")
 master.wait_heartbeat()  # 等待心跳包，建立通信
 print("已接收到心跳：系统ID %u, 组件ID %u" % (master.target_system, master.target_component))
 
-# --------------------------------------------
-# 预先发送定点消息，激活OFFBOARD模式要求
-print("预先发送定点消息以激活OFFBOARD模式...")
-for i in range(30):  # 约3秒，每100毫秒发送一次定点消息
-    master.mav.set_actuator_control_target_send(
-        int(time.time() * 1e6),  # 当前时间戳（微秒）
-        0,                       # 控制组编号
-        master.target_system,    # 目标系统ID
-        master.target_component, # 目标组件ID
-        [0.0]*8                  # 全部控制通道置0
-    )
-    time.sleep(0.1)
+# Choose a mode
+mode = 'OFFBOARD'
 
-# --------------------------------------------
-# 切换飞控模式至 OFFBOARD
-print("切换飞控模式为 OFFBOARD...")
-master.set_mode(4)  # 示例中使用数字4表示OFFBOARD模式，请参考飞控文档确认
-time.sleep(1)
-print("当前飞行模式：", master.flightmode)
+# Check if mode is available
+if mode not in master.mode_mapping():
+    print('Unknown mode : {}'.format(mode))
+    print('Try:', list(master.mode_mapping().keys()))
+    sys.exit(1)
 
-# --------------------------------------------
-# 发送Arm命令（强制解锁，绕过安全检查）
-print("发送Arm命令，解锁飞机...")
+# Get mode ID
+mode_id = master.mode_mapping()[mode]
+# Set new mode
 master.mav.command_long_send(
-    master.target_system,     # 目标系统ID
-    master.target_component,   # 目标组件ID
-    mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM,  # 命令
-    0,      # 确认标志
-    1,      # param1: 1 表示Arm
-    float(21196),  # param2: 魔数参数，强制Arm（绕过安全检查）
-    0,      # param3
-    0,      # param4
-    0,      # param5
-    0,      # param6
-    0,      # param7
-)
+   master.target_system, master.target_component,
+   mavutil.mavlink.MAV_CMD_DO_SET_MODE, 0,
+   0, mode_id, 0, 0, 0, 0, 0) 
+# or:
+# master.set_mode(mode_id) 
+# or:
+# master.mav.set_mode_send(
+#     master.target_system,
+#     mavutil.mavlink.MAV_MODE_FLAG_CUSTOM_MODE_ENABLED,
+#     mode_id)
 
-# 等待ARM成功（不断接收心跳更新状态）
-print("等待飞机解锁（ARM）...")
-while True:
-    # 阻塞等待下一个HEARTBEAT消息，超时5秒
-    heartbeat = master.recv_match(type='HEARTBEAT', blocking=True, timeout=5)
-    if heartbeat is None:
-        print("未收到心跳，重试中...")
-        continue
-    # 判断解锁标志是否置位
-    if heartbeat.base_mode & mavutil.mavlink.MAV_MODE_FLAG_SAFETY_ARMED:
-        print("飞机已成功解锁。")
-        break
-    time.sleep(0.5)
+# Arm
+# master.arducopter_arm() or:
+master.mav.command_long_send(
+    master.target_system,
+    master.target_component,
+    mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM,
+    0,
+    1, 0, 0, 0, 0, 0, 0)
+
+# wait until arming confirmed (can manually check with master.motors_armed())
+print("Waiting for the vehicle to arm")
+master.motors_armed_wait()
+print('Armed!')
 
 # --------------------------------------------
 # 设置目标组件ID（飞控通常使用MAV_COMP_ID_AUTOPILOT1）
@@ -83,7 +71,7 @@ master.target_component = mavutil.mavlink.MAV_COMP_ID_AUTOPILOT1
 # 构造控制指令
 # 对于四旋翼，假设控制组0对应电机输出；
 # controls数组共有8个元素，前4个电机设置为50%油门（0.1示例中可调），其余置0。
-controls = [0.1, 0.1, 0.1, 0.1] + [0.0] * 4
+controls = [0.5, 0.0, 0.0, 0.0] + [0.0] * 4
 
 def send_motor_control(controls_array):
     """

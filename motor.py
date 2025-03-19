@@ -26,22 +26,22 @@ print("正在连接飞控...")
 master.wait_heartbeat()  # 等待心跳包，建立通信
 print("已接收到心跳：系统ID %u, 组件ID %u" % (master.target_system, master.target_component))
 
-# Choose a mode
-mode = 'OFFBOARD'
+# # Choose a mode
+# mode = 'OFFBOARD'
 
-# Check if mode is available
-if mode not in master.mode_mapping():
-    print('Unknown mode : {}'.format(mode))
-    print('Try:', list(master.mode_mapping().keys()))
-    sys.exit(1)
+# # Check if mode is available
+# if mode not in master.mode_mapping():
+#     print('Unknown mode : {}'.format(mode))
+#     print('Try:', list(master.mode_mapping().keys()))
+#     sys.exit(1)
 
-# Get mode ID
-mode_id = master.mode_mapping()[mode]
-# Set new mode
-master.mav.command_long_send(
-   master.target_system, master.target_component,
-   mavutil.mavlink.MAV_CMD_DO_SET_MODE, 0,
-   0, mode_id, 0, 0, 0, 0, 0) 
+# # Get mode ID
+# mode_id = master.mode_mapping()[mode]
+# # Set new mode
+# master.mav.command_long_send(
+#    master.target_system, master.target_component,
+#    mavutil.mavlink.MAV_CMD_DO_SET_MODE, 0,
+#    0, mode_id, 0, 0, 0, 0, 0) 
 # or:
 # master.set_mode(mode_id) 
 # or:
@@ -71,7 +71,7 @@ master.target_component = mavutil.mavlink.MAV_COMP_ID_AUTOPILOT1
 # 构造控制指令
 # 对于四旋翼，假设控制组0对应电机输出；
 # controls数组共有8个元素，前4个电机设置为50%油门（0.1示例中可调），其余置0。
-controls = [0.5, 0.0, 0.0, 0.0] + [0.0] * 4
+controls = [0.7, 0.7, 0.7, 0.7] + [0.0] * 4
 
 def send_motor_control(controls_array):
     """
